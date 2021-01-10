@@ -77,11 +77,11 @@ subscriptions model =
 view : Model -> Html Msg
 view {time,zone} =
   let
-    uvalnyatTime =
+    dischargeTime =
       Time.millisToPosix 1627549200000
   in
   div []
-    [ h1 [] [ text <| "Հիմա: " ++ ArmFormat.dateString zone time ]
-    , h1 [] [ text <| "Ուվալնյատ: " ++ ArmFormat.dateString zone uvalnyatTime ]
-    , h1 [] [ text <| "Մնաց: " ++ ArmFormat.remainingString time uvalnyatTime ]
+    [ h1 [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
+    , h1 [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone dischargeTime ]
+    , h1 [] [ text <| "Մնաց. " ++ ArmFormat.remainingString time dischargeTime ]
     ]
