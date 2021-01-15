@@ -14,7 +14,7 @@ import Time
 
 
 main =
-  Browser.element
+  Browser.document
     { init = init
     , view = view
     , update = update
@@ -75,7 +75,7 @@ subscriptions model =
 -- VIEW
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view {time,zone} =
   let
     labels =
@@ -89,17 +89,12 @@ view {time,zone} =
       ]
     dischargeTime =
       Time.millisToPosix 1627549200000
+    body =
+      [ p [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
+      , p [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone dischargeTime ]
+      , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString labels time dischargeTime ]
+      ]
+    title =
+      "Զորացրում"
   in
-  div []
-    [ p [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
-    , p [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone dischargeTime ]
-    , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString labels time dischargeTime ]
-    -- , div [] 
-    --   [ label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
-    --   , label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
-    --   , label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
-    --   , label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
-    --   , label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
-    --   , label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
-    --   ]
-    ]
+    Browser.Document title body
