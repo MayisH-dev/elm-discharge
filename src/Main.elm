@@ -108,12 +108,12 @@ view { time, zone, timeSpans } =
     viewDischarge { date, name, hasGithub } =
       div []
         [ h3 []
-           (if hasGithub then 
+           (if hasGithub then
               [ a [ href <| "https://github.com/" ++ name ] [ text name ] ]
 
-            else 
+            else
               [ text name ]
-           ) 
+           )
         , p [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone date ]
         , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString timeSpans time date ]
         ]
