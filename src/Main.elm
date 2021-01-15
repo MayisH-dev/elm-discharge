@@ -5,9 +5,13 @@ import Browser
 import Browser.Events
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import ArmFormat exposing (TimeSpan(..))
+import Html.Events exposing (..)
 import Task
 import Time
+import List.Extra as List
+
+
+import ArmFormat exposing (TimeSpan(..))
 
 
 -- MAIN
@@ -29,12 +33,13 @@ main =
 type alias Model =
   { zone : Time.Zone
   , time : Time.Posix
+  , timeSpans : List TimeSpan
   }
 
 
 init : () -> (Model, Cmd Msg)
 init _ =
-  ( Model Time.utc (Time.millisToPosix 0)
+  ( Model Time.utc (Time.millisToPosix 0) [ Yr , Mnt , Dy , Hr , Min , Sec , Ms ]
   , Task.perform AdjustTimeZone Time.here
   )
 
@@ -46,6 +51,8 @@ init _ =
 type Msg
   = Tick Time.Posix
   | AdjustTimeZone Time.Zone
+  | Select TimeSpan
+  | Deselect TimeSpan
 
 
 
@@ -62,7 +69,24 @@ update msg model =
       , Cmd.none
       )
 
-
+    Select timeSpan ->
+      ( { model
+        | timeSpans =
+            timeSpan :: model.timeSpans
+              |> List.sortBy ArmFormat.timeSpanToInt
+              |> List.uniqueBy ArmFormat.timeSpanToInt
+        }
+      , Cmd.none
+      )
+    
+    Deselect timeSpan ->
+      ( { model
+        | timeSpans =
+            model.timeSpans
+              |> List.remove timeSpan
+        }
+      , Cmd.none
+      )
 
 -- SUBSCRIPTIONS
 
@@ -76,17 +100,19 @@ subscriptions model =
 
 
 view : Model -> Browser.Document Msg
-view {time,zone} =
+view {time,zone,timeSpans} =
   let
-    timeSpans =
+    allTimeSpans =
       [ Yr , Mnt , Dy , Hr , Min , Sec , Ms ]
     dischargeTime =
       Time.millisToPosix 1627549200000
     body =
       [ p [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
       , p [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone dischargeTime ]
+      , fieldset []
+          <| legend [] [ text "Ժամանակացույց" ]
+            :: List.map2 viewTimeSpanToggle allTimeSpans (List.map (\x -> List.member x timeSpans) allTimeSpans)
       , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString timeSpans time dischargeTime ]
-      , div [] <| List.map viewTimeSpanToggle timeSpans
       ]
     title =
       "Զորացրում"
@@ -96,6 +122,16 @@ view {time,zone} =
 
 -- HELPERS
 
-viewTimeSpanToggle : TimeSpan -> Html Msg
-viewTimeSpanToggle timeSpan =
-  label [] [ input [ type_ "checkbox" ] [] , text <| ArmFormat.timeSpanToString timeSpan ] 
+viewTimeSpanToggle : TimeSpan -> Bool -> Html Msg
+viewTimeSpanToggle timeSpan isChecked =
+  let
+      command checkState =
+        case checkState of
+          True ->
+            Select timeSpan
+
+          False ->
+            Deselect timeSpan
+
+  in
+    label [] [ input [ onCheck command, checked isChecked, type_ "checkbox" ] [], text <| ArmFormat.timeSpanToString timeSpan ]

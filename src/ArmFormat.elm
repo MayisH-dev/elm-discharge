@@ -1,4 +1,4 @@
-module ArmFormat exposing (dateString,remainingString,timeSpanToString,TimeSpan(..))
+module ArmFormat exposing (dateString,remainingString,timeSpanToString,timeSpanToInt,TimeSpan(..))
 
 import List.Extra as List
 import Maybe.Extra as Maybe
@@ -42,7 +42,7 @@ remainingString timeSpans start end =
       |> List.filterMap remainingInterval
       |> String.join ", "
 
-
+dateString : Time.Zone -> Time.Posix -> String
 dateString zone time =
   let
     currentYear =
@@ -89,6 +89,16 @@ type TimeSpan
   | Sec
   | Ms
 
+timeSpanToInt : TimeSpan -> Int
+timeSpanToInt timeSpan =
+  case timeSpan of
+    Yr -> 0
+    Mnt -> 1
+    Dy -> 2
+    Hr -> 3
+    Min -> 4
+    Sec -> 5
+    Ms -> 6
 
 timeSpanToString timeSpan =
   case timeSpan of
