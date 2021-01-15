@@ -100,19 +100,48 @@ subscriptions model =
 
 
 view : Model -> Browser.Document Msg
-view {time,zone,timeSpans} =
+view { time, zone, timeSpans } =
   let
     allTimeSpans =
       [ Yr , Mnt , Dy , Hr , Min , Sec , Ms ]
-    dischargeTime =
-      Time.millisToPosix 1627549200000
+
+    viewDischarge { date, name, hasGithub } =
+      div []
+        [ h3 []
+           (if hasGithub then 
+              [ a [ href <| "https://github.com/" ++ name ] [ text name ] ]
+
+            else 
+              [ text name ]
+           ) 
+        , p [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone date ]
+        , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString timeSpans time date ]
+        ]
+
+    discharges =
+      [ { date = Time.millisToPosix 1627549200000
+        , name = "MayisH-dev"
+        , hasGithub = True }
+      , { date = Time.millisToPosix 1611388800000
+        , name = "Doberman"
+        , hasGithub = False }
+      , { date = Time.millisToPosix 1660291200000
+        , name = "Shark"
+        , hasGithub = False }
+      , { date = Time.millisToPosix 1627635600000
+        , name = "In-line"
+        , hasGithub = True }
+      , { date = Time.millisToPosix 1627635600000
+        , name = "hingev"
+        , hasGithub = True }
+      ]
+
     body =
-      [ p [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
-      , p [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone dischargeTime ]
-      , fieldset []
-          <| legend [] [ text "Ժամանակացույց" ]
+      [ h1 [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
+      , fieldset [] <| legend [] [ text "Ժամանակացույց" ]
             :: List.map2 viewTimeSpanToggle allTimeSpans (List.map (\x -> List.member x timeSpans) allTimeSpans)
-      , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString timeSpans time dischargeTime ]
+      , h2 [] [ text "Զորացրումներ" ]
+      , div []  <| List.map viewDischarge discharges
       ]
     title =
       "Զորացրում"
