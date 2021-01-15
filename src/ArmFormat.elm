@@ -1,4 +1,4 @@
-module ArmFormat exposing (dateString,remainingString,TimeSpan(..))
+module ArmFormat exposing (dateString,remainingString,timeSpanToString,TimeSpan(..))
 
 import List.Extra as List
 import Maybe.Extra as Maybe
@@ -18,7 +18,7 @@ remainingString timeSpans start end =
 
     appendArmTimeSpan timeSpan string =
       timeSpan
-        |> timeSpanToArm
+        |> timeSpanToString
         |> String.append string
 
     remainingInterval timeSpan =
@@ -32,6 +32,7 @@ remainingString timeSpans start end =
       case previous timeSpan of
         Nothing ->
           impl timeSpan start
+
         Just prev ->
           Time.diff (intervalFromTimeSpan prev) Time.utc start end
             |> \diff -> Time.add (intervalFromTimeSpan prev) diff Time.utc start
@@ -78,6 +79,7 @@ dateString zone time =
     ++ currentDay ++ "/" ++ currentMonth ++ "/" ++ currentYear ++ " "
     ++ currentTime ++ ":" ++ currentMillis
 
+
 type TimeSpan
   = Yr
   | Mnt
@@ -87,7 +89,20 @@ type TimeSpan
   | Sec
   | Ms
 
+
+timeSpanToString timeSpan =
+  case timeSpan of
+    Yr -> "տարի"
+    Mnt -> "ամիս"
+    Dy -> "օր"
+    Hr -> "ժամ"
+    Min -> "րոպե"
+    Sec -> "վայրկյան"
+    Ms -> "միլիվայրկյան"
+
+
 -- HELPERS
+
 
 intervalFromTimeSpan : TimeSpan -> Interval
 intervalFromTimeSpan timeSpan =
@@ -100,15 +115,6 @@ intervalFromTimeSpan timeSpan =
     Sec -> Second
     Ms -> Millisecond
 
-timeSpanToArm timeSpan =
-  case timeSpan of
-    Yr -> "տարի"
-    Mnt -> "ամիս"
-    Dy -> "օր"
-    Hr -> "ժամ"
-    Min -> "րոպե"
-    Sec -> "վայրկյան"
-    Ms -> "միլիվայրկյան"
  
 uncurry : (a -> b -> c) -> (a, b) -> c
 uncurry f =

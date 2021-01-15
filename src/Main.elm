@@ -78,23 +78,24 @@ subscriptions model =
 view : Model -> Browser.Document Msg
 view {time,zone} =
   let
-    labels =
-      [ Yr
-      , Mnt
-      , Dy
-      , Hr
-      , Min
-      , Sec
-      , Ms
-      ]
+    timeSpans =
+      [ Yr , Mnt , Dy , Hr , Min , Sec , Ms ]
     dischargeTime =
       Time.millisToPosix 1627549200000
     body =
       [ p [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
       , p [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone dischargeTime ]
-      , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString labels time dischargeTime ]
+      , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString timeSpans time dischargeTime ]
+      , div [] <| List.map viewTimeSpanToggle timeSpans
       ]
     title =
       "Զորացրում"
   in
     Browser.Document title body
+
+
+-- HELPERS
+
+viewTimeSpanToggle : TimeSpan -> Html Msg
+viewTimeSpanToggle timeSpan =
+  label [] [ input [ type_ "checkbox" ] [] , text <| ArmFormat.timeSpanToString timeSpan ] 
