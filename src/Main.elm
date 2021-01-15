@@ -4,7 +4,8 @@ module Main exposing (main)
 import Browser
 import Browser.Events
 import Html exposing (..)
-import ArmFormat
+import Html.Attributes exposing (..)
+import ArmFormat exposing (TimeSpan(..))
 import Task
 import Time
 
@@ -77,11 +78,28 @@ subscriptions model =
 view : Model -> Html Msg
 view {time,zone} =
   let
+    labels =
+      [ Yr
+      , Mnt
+      , Dy
+      , Hr
+      , Min
+      , Sec
+      , Ms
+      ]
     dischargeTime =
       Time.millisToPosix 1627549200000
   in
   div []
-    [ h1 [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
-    , h1 [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone dischargeTime ]
-    , h1 [] [ text <| "Մնաց. " ++ ArmFormat.remainingString time dischargeTime ]
+    [ p [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
+    , p [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone dischargeTime ]
+    , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString labels time dischargeTime ]
+    -- , div [] 
+    --   [ label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
+    --   , label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
+    --   , label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
+    --   , label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
+    --   , label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
+    --   , label [] [ text "Տարի", input [ type_ "checkbox" ] [] ]
+    --   ]
     ]

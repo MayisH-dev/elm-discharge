@@ -1,56 +1,43 @@
-module ArmFormat exposing (dateString,remainingString)
+module ArmFormat exposing (dateString,remainingString,TimeSpan(..))
 
+import List.Extra as List
+import Maybe.Extra as Maybe
 import Time exposing (Month(..), Weekday(..))
 import Time.Extra as Time exposing (Interval(..))
 
-remainingString : Time.Posix -> Time.Posix -> String
-remainingString start end =
+remainingString : List TimeSpan -> Time.Posix -> Time.Posix -> String
+remainingString timeSpans start end =
   let
-    previous interval =
-      case interval of
-        Month -> Just Year
-        Day -> Just Month
-        Hour  -> Just Day
-        Minute  -> Just Hour
-        Second  -> Just Minute
-        Millisecond -> Just Second
-        _ -> Nothing
-    toArmInterval interval =
-      case interval of
-        Year -> Just "տարի"
-        Month  -> Just "ամիս"
-        Day -> Just "օր"
-        Hour  -> Just "ժամ"
-        Minute  -> Just "րոպե"
-        Second  -> Just "վայրկյան"
-        Millisecond -> Just "միլիվայրկյան"
-        _ -> Nothing
-    appendArmInterval interval string =
-      toArmInterval interval
-        |> Maybe.map (String.append string)
-    remainingInterval interval =
+    intervals =
+      timeSpans
+        |> nothingIfEmpty
+        |> Maybe.withDefault [Ms]
+
+    previous timeSpan =
+      listPrevOf timeSpan timeSpans
+
+    appendArmTimeSpan timeSpan string =
+      timeSpan
+        |> timeSpanToArm
+        |> String.append string
+
+    remainingInterval timeSpan =
       let
         impl adjustedInterval adjustedStart =
-          Time.diff adjustedInterval Time.utc adjustedStart end
-            |> maybeFromInt
-            |> Maybe.map (\diff -> String.append (String.fromInt diff) " ")
-            |> Maybe.andThen (appendArmInterval adjustedInterval)
+          Time.diff (intervalFromTimeSpan adjustedInterval) Time.utc adjustedStart end
+            |> nothingIfZero
+            |> Maybe.map (String.fromInt >> (\diff -> String.append diff " "))
+            |> Maybe.map (appendArmTimeSpan adjustedInterval)
       in
-      case previous interval of
-        Nothing -> impl interval start
+      case previous timeSpan of
+        Nothing ->
+          impl timeSpan start
         Just prev ->
-          Time.diff prev Time.utc start end
-            |> \diff -> Time.add prev diff Time.utc start
-            |> impl interval
+          Time.diff (intervalFromTimeSpan prev) Time.utc start end
+            |> \diff -> Time.add (intervalFromTimeSpan prev) diff Time.utc start
+            |> impl timeSpan
   in
-    [ Year
-    , Month
-    , Day
-    , Hour
-    , Minute
-    , Second
-    , Millisecond
-    ]
+    intervals
       |> List.filterMap remainingInterval
       |> String.join ", "
 
@@ -91,8 +78,38 @@ dateString zone time =
     ++ currentDay ++ "/" ++ currentMonth ++ "/" ++ currentYear ++ " "
     ++ currentTime ++ ":" ++ currentMillis
 
+type TimeSpan
+  = Yr
+  | Mnt
+  | Dy
+  | Hr
+  | Min
+  | Sec
+  | Ms
 
 -- HELPERS
+
+intervalFromTimeSpan : TimeSpan -> Interval
+intervalFromTimeSpan timeSpan =
+  case timeSpan of
+    Yr -> Year
+    Mnt -> Month
+    Dy -> Day
+    Hr -> Hour
+    Min -> Minute
+    Sec -> Second
+    Ms -> Millisecond
+
+timeSpanToArm timeSpan =
+  case timeSpan of
+    Yr -> "տարի"
+    Mnt -> "ամիս"
+    Dy -> "օր"
+    Hr -> "ժամ"
+    Min -> "րոպե"
+    Sec -> "վայրկյան"
+    Ms -> "միլիվայրկյան"
+ 
 uncurry : (a -> b -> c) -> (a, b) -> c
 uncurry f =
   \(a,b) -> f a b
@@ -125,7 +142,22 @@ toArmWeekday weekday =
     Sat -> "շաբաթ"
     Sun -> "կիրակի"
 
-maybeFromInt a =
+nothingIfZero a =
   case a of
     0 -> Nothing
     _ -> Just a
+
+nothingIfEmpty a =
+  case a of
+    [] -> Nothing
+    _ -> Just a
+
+fst (a,_) = a
+snd (_,a) = a
+
+listPrevOf : a -> List a -> Maybe a
+listPrevOf item list =
+  list
+    |> List.zip (Nothing :: List.map Just list)
+    |> List.find (snd >> (==) item)
+    |> Maybe.andThen fst
