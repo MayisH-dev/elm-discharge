@@ -12,6 +12,7 @@ import List.Extra as List
 
 
 import ArmFormat exposing (TimeSpan(..))
+import Ports
 
 
 -- MAIN
@@ -34,12 +35,21 @@ type alias Model =
   { zone : Time.Zone
   , time : Time.Posix
   , timeSpans : List TimeSpan
+  , discharges : List { date : Time.Posix, name : String, hasGithub : Bool }
   }
 
 
 init : () -> (Model, Cmd Msg)
 init _ =
-  ( Model Time.utc (Time.millisToPosix 0) [ Yr , Mnt , Dy , Hr , Min , Sec , Ms ]
+  ( Model
+      Time.utc
+      (Time.millisToPosix 0)
+      [ Yr , Mnt , Dy , Hr , Min , Sec , Ms ]
+      [ { date = Time.millisToPosix 1627549200000
+        , name = "MayisH-dev"
+        , hasGithub = True
+        }
+      ]
   , Task.perform AdjustTimeZone Time.here
   )
 
@@ -78,7 +88,7 @@ update msg model =
         }
       , Cmd.none
       )
-    
+
     Deselect timeSpan ->
       ( { model
         | timeSpans =
@@ -100,67 +110,65 @@ subscriptions model =
 
 
 view : Model -> Browser.Document Msg
-view { time, zone, timeSpans } =
+view { time, zone, timeSpans, discharges } =
   let
-    allTimeSpans =
-      [ Yr , Mnt , Dy , Hr , Min , Sec , Ms ]
-
     viewDischarge { date, name, hasGithub } =
       div []
         [ h3 []
-           (if hasGithub then
+           ( if hasGithub then
               [ a [ href <| "https://github.com/" ++ name ] [ text name ] ]
 
             else
               [ text name ]
            )
         , p [] [ text <| "Զորացրում. " ++ ArmFormat.dateString zone date ]
-        , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString timeSpans time date ]
+        , p [] [ text <| "Մնաց. " ++ ArmFormat.remainingString timeSpans zone time date ]
         ]
-
-    discharges =
-      [ { date = Time.millisToPosix 1627549200000
-        , name = "MayisH-dev"
-        , hasGithub = True }
-      , { date = Time.millisToPosix 1611388800000
-        , name = "Doberman"
-        , hasGithub = False }
-      , { date = Time.millisToPosix 1660291200000
-        , name = "Shark"
-        , hasGithub = False }
-      , { date = Time.millisToPosix 1627635600000
-        , name = "In-line"
-        , hasGithub = True }
-      , { date = Time.millisToPosix 1627635600000
-        , name = "hingev"
-        , hasGithub = True }
-      ]
 
     body =
       [ h1 [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
-      , fieldset [] <| legend [] [ text "Ժամանակացույց" ]
-            :: List.map2 viewTimeSpanToggle allTimeSpans (List.map (\x -> List.member x timeSpans) allTimeSpans)
+      , fieldset [] <| legend [
+          [ text "Ժամանակացույց" ]
+            :: viewTimeSpanToggles timeSpans
       , h2 [] [ text "Զորացրումներ" ]
       , div []  <| List.map viewDischarge discharges
       ]
     title =
-      "Զորացրում"
+      discharges
+        |> List.head
+        |> Maybe.map
+          ( .date
+            >> ArmFormat.remainingString [Dy,Hr] zone time
+            >> String.append "Մնաց։ "
+          )
+        |> Maybe.withDefault "Զորացրում"
   in
     Browser.Document title body
 
 
 -- HELPERS
 
+viewTimeSpanToggles : List TimeSpan -> List (Html Msg)
+viewTimeSpanToggles timeSpans =
+  List.map2 viewTimeSpanToggle allTimeSpans (List.map (\x -> List.member x timeSpans) allTimeSpans)
+
+
+
 viewTimeSpanToggle : TimeSpan -> Bool -> Html Msg
 viewTimeSpanToggle timeSpan isChecked =
   let
       command checkState =
-        case checkState of
-          True ->
-            Select timeSpan
+        if checkState then
+          Select timeSpan
 
-          False ->
-            Deselect timeSpan
+        else
+          Deselect timeSpan
 
   in
-    label [] [ input [ onCheck command, checked isChecked, type_ "checkbox" ] [], text <| ArmFormat.timeSpanToString timeSpan ]
+    label []
+      [ input [ onCheck command, checked isChecked, type_ "checkbox" ] []
+      , text <| ArmFormat.timeSpanToString timeSpan
+      ]
+
+allTimeSpans =
+  [ Yr , Mnt , Dy , Hr , Min , Sec , Ms ]

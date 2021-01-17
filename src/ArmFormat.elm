@@ -1,46 +1,33 @@
 module ArmFormat exposing (dateString,remainingString,timeSpanToString,timeSpanToInt,TimeSpan(..))
 
+import Tuple2 as Tuple
 import List.Extra as List
 import Maybe.Extra as Maybe
 import Time exposing (Month(..), Weekday(..))
 import Time.Extra as Time exposing (Interval(..))
 
-remainingString : List TimeSpan -> Time.Posix -> Time.Posix -> String
-remainingString timeSpans start end =
-  let
-    intervals =
-      timeSpans
-        |> nothingIfEmpty
-        |> Maybe.withDefault [Ms]
-
-    previous timeSpan =
-      listPrevOf timeSpan timeSpans
-
-    appendArmTimeSpan timeSpan string =
-      timeSpan
-        |> timeSpanToString
-        |> String.append string
-
-    remainingInterval timeSpan =
-      let
-        impl adjustedInterval adjustedStart =
-          Time.diff (intervalFromTimeSpan adjustedInterval) Time.utc adjustedStart end
-            |> nothingIfZero
-            |> Maybe.map (String.fromInt >> (\diff -> String.append diff " "))
-            |> Maybe.map (appendArmTimeSpan adjustedInterval)
-      in
-      case previous timeSpan of
-        Nothing ->
-          impl timeSpan start
-
-        Just prev ->
-          Time.diff (intervalFromTimeSpan prev) Time.utc start end
-            |> \diff -> Time.add (intervalFromTimeSpan prev) diff Time.utc start
-            |> impl timeSpan
-  in
-    intervals
-      |> List.filterMap remainingInterval
-      |> String.join ", "
+remainingString : List TimeSpan -> Time.Zone -> Time.Posix -> Time.Posix -> String
+remainingString timeSpans timeZone start end =
+  timeSpans
+    |> List.zip (Nothing :: List.map (intervalFromTimeSpan >> Just) timeSpans)
+    |> List.map
+        ( \(prev,ts) ->
+            prev
+              |> Maybe.map
+                (\p ->
+                  Time.diff p timeZone start end
+                    |> \diff -> Time.add p diff timeZone start
+                )
+              |> Maybe.withDefault start
+              |> \s -> Time.diff (intervalFromTimeSpan ts) timeZone s end
+              |> Tuple.pair ts
+        )
+    |> List.filter (Tuple.second >> (/=) 0)
+    |> List.map
+        ( Tuple.mapBoth timeSpanToString String.fromInt
+          >> \(t,r) -> r ++ " " ++ t
+        )
+    |> String.join ", "
 
 dateString : Time.Zone -> Time.Posix -> String
 dateString zone time =
@@ -64,10 +51,10 @@ dateString zone time =
       , Time.toSecond
       ]
         |> List.map
-          (uncurry
-            >> (|>) (zone,time)
-            >> String.fromInt
-            >> String.padLeft 2 '0'
+          ( Tuple.uncurry
+              >> (|>) (zone,time)
+              >> String.fromInt
+              >> String.padLeft 2 '0'
           )
         |> String.join ":"
     currentMillis =
@@ -125,12 +112,6 @@ intervalFromTimeSpan timeSpan =
     Sec -> Second
     Ms -> Millisecond
 
- 
-uncurry : (a -> b -> c) -> (a, b) -> c
-uncurry f =
-  \(a,b) -> f a b
-
-
 toArmMonth : Month -> String
 toArmMonth month =
   case month of
@@ -157,23 +138,3 @@ toArmWeekday weekday =
     Fri -> "ուրբաթ"
     Sat -> "շաբաթ"
     Sun -> "կիրակի"
-
-nothingIfZero a =
-  case a of
-    0 -> Nothing
-    _ -> Just a
-
-nothingIfEmpty a =
-  case a of
-    [] -> Nothing
-    _ -> Just a
-
-fst (a,_) = a
-snd (_,a) = a
-
-listPrevOf : a -> List a -> Maybe a
-listPrevOf item list =
-  list
-    |> List.zip (Nothing :: List.map Just list)
-    |> List.find (snd >> (==) item)
-    |> Maybe.andThen fst
