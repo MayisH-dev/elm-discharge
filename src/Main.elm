@@ -9,6 +9,7 @@ import Html.Events exposing (..)
 import Task
 import Time
 import List.Extra as List
+import Json.Encode as Encode
 
 
 import ArmFormat exposing (TimeSpan(..))
@@ -29,13 +30,13 @@ main =
 
 
 -- MODEL
-
+type alias Discharge = { date : Time.Posix, name : String, hasGithub : Bool }
 
 type alias Model =
   { zone : Time.Zone
   , time : Time.Posix
   , timeSpans : List TimeSpan
-  , discharges : List { date : Time.Posix, name : String, hasGithub : Bool }
+  , discharges : List Discharge
   }
 
 
@@ -127,12 +128,13 @@ view { time, zone, timeSpans, discharges } =
 
     body =
       [ h1 [] [ text <| "Հիմա. " ++ ArmFormat.dateString zone time ]
-      , fieldset [] <| legend [
-          [ text "Ժամանակացույց" ]
-            :: viewTimeSpanToggles timeSpans
+      , fieldset [] <|
+        legend [] [ text "Ժամանակացույց" ] 
+          :: viewTimeSpanToggles timeSpans
       , h2 [] [ text "Զորացրումներ" ]
       , div []  <| List.map viewDischarge discharges
       ]
+
     title =
       discharges
         |> List.head
@@ -147,6 +149,15 @@ view { time, zone, timeSpans, discharges } =
 
 
 -- HELPERS
+
+
+dischargeEncoder : Discharge -> Encode.Value
+dischargeEncoder { date, name, hasGithub } =
+  Encode.object
+    [ ("date", Time.posixToMillis date |> Encode.int)
+    , ("name", Encode.string name)
+    , ("hasGithub", Encode.bool hasGithub)
+    ]
 
 viewTimeSpanToggles : List TimeSpan -> List (Html Msg)
 viewTimeSpanToggles timeSpans =
@@ -169,6 +180,12 @@ viewTimeSpanToggle timeSpan isChecked =
       [ input [ onCheck command, checked isChecked, type_ "checkbox" ] []
       , text <| ArmFormat.timeSpanToString timeSpan
       ]
+
+saveDischarges : List Discharge -> Cmd msg
+saveDischarges discharges =
+  Encode.list dischargeEncoder discharges
+    |> Encode.encode 0
+    |> Ports.storeDischarges
 
 allTimeSpans =
   [ Yr , Mnt , Dy , Hr , Min , Sec , Ms ]
